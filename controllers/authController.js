@@ -1,4 +1,30 @@
 import User from "../models/User.js";
+import jwt from "jsonwebtoken";
+
+const signToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
+    expiresIn: "1d",
+  });
+};
+
+const createSendToken = (user, statusCode, res) => {
+  const token = signToken(user._id);
+  res.cookie("jwt", token, {
+    httpOnly: true,
+    // secure: process.env.NODE_ENV === "production",
+    maxAge: 24 * 60 * 60 * 1000, // 1 day
+  });
+
+
+  user.password = undefined; // Remove password from response
+  res.status(statusCode).json({
+    status: "success",
+    token,
+    data: {
+      user,
+    },
+  });
+};
 
 export const register = async (req, res) => {
  try {
@@ -19,8 +45,8 @@ export const register = async (req, res) => {
     const newUser = new User({ name, username, email, password });
     newUser.save();
 
-    res.status(201).json({ message: "User registered successfully" });
-  } catch (error) {
+createSendToken(newUser, 201, res);
+} catch (error) {
     console.error("Registration error:", error);
     res.status(500).json({ message: "Internal server error" });
   }
